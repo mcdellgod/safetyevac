@@ -8,6 +8,69 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
+    <section class="auth-screen" id="auth-screen">
+      <div class="auth-card">
+        <div class="brand auth-brand">
+          <div class="brand-mark">SE</div>
+          <div>
+            <strong>Safety Evac</strong>
+            <span>Accès sécurisé</span>
+          </div>
+        </div>
+
+        <div class="auth-tabs" role="tablist" aria-label="Authentification">
+          <button class="auth-tab active" type="button" data-auth-mode="login">Connexion</button>
+          <button class="auth-tab" type="button" data-auth-mode="signup">Créer un compte</button>
+        </div>
+
+        <form class="auth-form active" id="login-form">
+          <label>Email
+            <input id="login-email" type="email" autocomplete="email" required />
+          </label>
+          <label>Mot de passe
+            <input id="login-password" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="primary-button" type="submit">Se connecter</button>
+        </form>
+
+        <form class="auth-form" id="signup-form">
+          <label>Nom
+            <input id="signup-nom" autocomplete="name" required />
+          </label>
+          <label>Email
+            <input id="signup-email" type="email" autocomplete="email" required />
+          </label>
+          <label>Téléphone
+            <input id="signup-telephone" type="tel" autocomplete="tel" />
+          </label>
+          <label>Mot de passe
+            <input id="signup-password" type="password" autocomplete="new-password" minlength="6" required />
+          </label>
+          <div class="form-grid compact">
+            <label>Bâtiment
+              <input id="signup-batiment" value="Bâtiment A" />
+            </label>
+            <label>Zone
+              <input id="signup-zone" value="A1" />
+            </label>
+          </div>
+          <label>Rôle
+            <select id="signup-role">
+              <option value="employe">Employé</option>
+              <option value="guide_file">Guide-file</option>
+              <option value="secouriste">Secouriste</option>
+              <option value="chef_securite">Chef sécurité</option>
+              <option value="visiteur_temporaire">Visiteur temporaire</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <button class="primary-button" type="submit">Créer le compte</button>
+        </form>
+
+        <p class="auth-note" id="auth-note">Les rôles sensibles devront être validés par un administrateur avant une mise en production.</p>
+      </div>
+    </section>
+
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
@@ -29,8 +92,9 @@
 
         <div class="operator">
           <span>Connecté</span>
-          <strong>Claire Muller</strong>
-          <small>Chef d'évacuation</small>
+          <strong id="operator-name">Claire Muller</strong>
+          <small id="operator-role">Chef d'évacuation</small>
+          <button class="logout-button" id="logout-button" type="button">Déconnexion</button>
         </div>
       </aside>
 
