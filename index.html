@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Safety Evac - Prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">SE</div>
+          <div>
+            <strong>Safety Evac</strong>
+            <span>Console opérationnelle</span>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Navigation principale">
+          <button class="nav-item active" data-view="dashboard">Tableau de bord</button>
+          <button class="nav-item" data-view="trigger">Déclencher</button>
+          <button class="nav-item" data-view="responses">Réponses</button>
+          <button class="nav-item" data-view="first-aid">Secours</button>
+          <button class="nav-item" data-view="reports">Rapports</button>
+          <button class="nav-item" data-view="admin">Administration</button>
+        </nav>
+
+        <div class="operator">
+          <span>Connecté</span>
+          <strong>Claire Muller</strong>
+          <small>Chef d'évacuation</small>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Prototype fonctionnel</p>
+            <h1 id="page-title">Tableau de bord</h1>
+          </div>
+          <div class="top-actions">
+            <button class="ghost-button" id="simulate-response">Simuler réponse</button>
+            <button class="primary-button" data-jump="trigger">Nouvelle alerte</button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboard">
+          <div class="status-band">
+            <div>
+              <p class="eyebrow">Alerte active</p>
+              <h2>Exercice incendie - Bâtiment A</h2>
+              <p>Zones A1, A2 et A3 vers point de rassemblement Nord.</p>
+            </div>
+            <span class="badge warning">Exercice</span>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric">
+              <span>Notifiés</span>
+              <strong id="metric-notified">86</strong>
+            </article>
+            <article class="metric">
+              <span>Réponses</span>
+              <strong id="metric-responded">54</strong>
+            </article>
+            <article class="metric">
+              <span>En sécurité</span>
+              <strong id="metric-safe">49</strong>
+            </article>
+            <article class="metric">
+              <span>Temps écoulé</span>
+              <strong id="metric-time">07:42</strong>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <section class="panel wide">
+              <div class="panel-header">
+                <div>
+                  <h2>Suivi des zones</h2>
+                  <p>Progression en temps réel par zone.</p>
+                </div>
+              </div>
+              <div class="zone-list" id="zone-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Événements</h2>
+                  <p>Chronologie opérationnelle.</p>
+                </div>
+              </div>
+              <ol class="timeline" id="timeline"></ol>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="trigger">
+          <section class="panel form-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Déclencher une alerte</h2>
+                <p>Sélectionnez le périmètre et les canaux de notification.</p>
+              </div>
+            </div>
+            <form id="trigger-form" class="form-grid">
+              <label>Type d'alerte
+                <select id="alert-type">
+                  <option value="EXERCISE">Exercice</option>
+                  <option value="REAL">Alarme réelle</option>
+                </select>
+              </label>
+              <label>Bâtiment
+                <select id="building">
+                  <option>Bâtiment A</option>
+                  <option>Bâtiment B</option>
+                  <option>Atelier logistique</option>
+                </select>
+              </label>
+              <label>Zones
+                <input id="zones" value="A1, A2, A3" />
+              </label>
+              <label>Point de rassemblement
+                <input id="assembly" value="Point Nord" />
+              </label>
+              <fieldset>
+                <legend>Canaux</legend>
+                <label class="check"><input type="checkbox" checked /> Push</label>
+                <label class="check"><input type="checkbox" checked /> Email</label>
+                <label class="check"><input type="checkbox" /> SMS</label>
+              </fieldset>
+              <label class="full">Message
+                <textarea id="message">Veuillez évacuer calmement vers le point de rassemblement indiqué.</textarea>
+              </label>
+              <button class="danger-button full" type="submit">Déclencher l'alerte</button>
+            </form>
+          </section>
+        </section>
+
+        <section class="view" id="responses">
+          <div class="content-grid">
+            <section class="panel">
+              <h2>Réponse employé</h2>
+              <form class="stacked-form" id="employee-form">
+                <label>Votre nom
+                  <input id="employee-name" value="Employé démo" />
+                </label>
+                <label>Êtes-vous présent sur le site ?
+                  <select id="employee-present">
+                    <option value="true">Oui</option>
+                    <option value="false">Non</option>
+                  </select>
+                </label>
+                <label>Êtes-vous en sécurité ?
+                  <select id="employee-safe">
+                    <option value="true">Oui</option>
+                    <option value="false">Non</option>
+                  </select>
+                </label>
+                <label>Localisation actuelle
+                  <input id="employee-location" placeholder="Ex: Point Nord" />
+                </label>
+                <button class="primary-button" type="submit">Envoyer ma réponse</button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <h2>Checklist guide-file</h2>
+              <form class="stacked-form" id="guide-form">
+                <label>Nom du guide-file
+                  <input id="guide-name" value="Guide démo" />
+                </label>
+                <label>Zone
+                  <input id="guide-zone" value="A2" />
+                </label>
+                <label class="check"><input id="guide-zone-ok" type="checkbox" /> Zone prise en charge</label>
+                <label class="check"><input id="guide-point-ok" type="checkbox" /> Point de rassemblement atteint</label>
+                <label class="check"><input id="guide-all-ok" type="checkbox" /> Toutes les personnes rassemblées</label>
+                <label>Notes
+                  <textarea id="guide-notes" placeholder="Personnes manquantes, obstacle, fumée..."></textarea>
+                </label>
+                <button class="primary-button" type="submit">Valider la zone</button>
+              </form>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Personnes à suivre</h2>
+                <p>Liste opérationnelle des non-répondants et situations à risque.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Nom</th><th>Zone</th><th>Statut</th><th>Dernier signal</th></tr>
+                </thead>
+                <tbody id="people-table"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="first-aid">
+          <section class="panel form-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Secours à personne</h2>
+                <p>Signaler un incident médical au chef de sécurité.</p>
+              </div>
+            </div>
+            <form id="aid-form" class="form-grid">
+              <label>Lieu du sinistre
+                <input id="aid-location" placeholder="Bureau 204, Bâtiment A" required />
+              </label>
+              <label>Victime si connue
+                <input id="aid-victim" placeholder="Nom de la personne" />
+              </label>
+              <label>Nature
+                <select id="aid-type">
+                  <option>Malaise</option>
+                  <option>Arrêt cardiaque</option>
+                  <option>Saignement</option>
+                  <option>Chute</option>
+                  <option>Brûlure</option>
+                  <option>Autre</option>
+                </select>
+              </label>
+              <button class="ghost-button" type="button" id="scan-location">Scanner QR lieu</button>
+              <button class="success-button full" type="submit">Alerter le chef de sécurité</button>
+            </form>
+            <p class="notice">En cas d'urgence vitale, appelez immédiatement le 112 en plus du signalement interne.</p>
+          </section>
+        </section>
+
+        <section class="view" id="reports">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Rapports</h2>
+                <p>Historique des évacuations et incidents.</p>
+              </div>
+              <button class="ghost-button" id="export-report">Exporter PDF</button>
+            </div>
+            <div class="report-list" id="report-list"></div>
+          </section>
+        </section>
+
+        <section class="view" id="admin">
+          <div class="content-grid">
+            <section class="panel">
+              <h2>Sites et zones</h2>
+              <div class="admin-list">
+                <div><strong>Bâtiment A</strong><span>A1, A2, A3</span></div>
+                <div><strong>Bâtiment B</strong><span>B1, B2</span></div>
+                <div><strong>Atelier logistique</strong><span>L1, L2, Quai</span></div>
+              </div>
+            </section>
+            <section class="panel">
+              <h2>Utilisateurs</h2>
+              <div class="admin-list">
+                <div><strong>Claire Muller</strong><span>Chef d'évacuation</span></div>
+                <div><strong>Marc Weber</strong><span>Guide-file A2</span></div>
+                <div><strong>Nathalie Schmit</strong><span>Employée</span></div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
