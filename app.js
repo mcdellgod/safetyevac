@@ -3,6 +3,8 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_55QMZTd7Br7HOBmtfs686Q_ZDC0ej40
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const state = {
+  user: null,
+  profile: null,
   activeAlert: null,
   notified: 86,
   responded: 54,
@@ -41,6 +43,15 @@ const titles = {
   admin: "Administration",
 };
 
+const roleLabels = {
+  admin: "Admin",
+  chef_securite: "Chef sécurité",
+  guide_file: "Guide-file",
+  secouriste: "Secouriste",
+  employe: "Employé",
+  visiteur_temporaire: "Visiteur temporaire",
+};
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
@@ -49,6 +60,79 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
   window.setTimeout(() => toast.classList.remove("show"), 2600);
+}
+
+function setAuthMode(mode) {
+  $$(".auth-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.authMode === mode));
+  $("#login-form").classList.toggle("active", mode === "login");
+  $("#signup-form").classList.toggle("active", mode === "signup");
+}
+
+function renderAuthState() {
+  const isAuthenticated = Boolean(state.user);
+  $("#auth-screen").classList.toggle("hidden", isAuthenticated);
+  $(".app-shell").classList.toggle("authenticated", isAuthenticated);
+
+  if (isAuthenticated && state.profile) {
+    $("#operator-name").textContent = state.profile.nom || state.user.email;
+    $("#operator-role").textContent = roleLabels[state.profile.role] || state.profile.role || "Utilisateur";
+  }
+}
+
+async function loadProfile() {
+  if (!state.user) return null;
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("user_id", state.user.id)
+    .maybeSingle();
+
+  if (error) {
+    showToast(`Profil: ${error.message}`);
+    return null;
+  }
+
+  state.profile = data;
+  renderAuthState();
+  return data;
+}
+
+async function upsertOwnProfile(profile) {
+  const { error } = await supabaseClient.from("profiles").upsert({
+    user_id: state.user.id,
+    email: state.user.email,
+    ...profile,
+  });
+  if (error) throw error;
+  await loadProfile();
+}
+
+async function initializeAuth() {
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error) {
+    showToast(`Session: ${error.message}`);
+    return;
+  }
+
+  state.user = data.session?.user || null;
+  if (state.user) {
+    await loadProfile();
+    await loadRemoteState();
+    subscribeToRealtime();
+  } else {
+    renderAuthState();
+  }
+
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    state.user = session?.user || null;
+    state.profile = null;
+    if (state.user) {
+      await loadProfile();
+      await loadRemoteState();
+      subscribeToRealtime();
+    }
+    renderAuthState();
+  });
 }
 
 async function loadRemoteState() {
@@ -136,7 +220,10 @@ async function loadRemoteState() {
 }
 
 function subscribeToRealtime() {
-  supabaseClient
+  if (state.realtimeChannel) {
+    return;
+  }
+  state.realtimeChannel = supabaseClient
     .channel("safety-evac-demo")
     .on("postgres_changes", { event: "*", schema: "public", table: "alerts" }, loadRemoteState)
     .on("postgres_changes", { event: "*", schema: "public", table: "evacuation_responses" }, loadRemoteState)
@@ -222,6 +309,73 @@ async function simulateResponse() {
 }
 
 function bindEvents() {
+  $$(".auth-tab").forEach((tab) => tab.addEventListener("click", () => setAuthMode(tab.dataset.authMode)));
+
+  $("#login-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: $("#login-email").value,
+      password: $("#login-password").value,
+    });
+    if (error) {
+      showToast(`Connexion: ${error.message}`);
+      return;
+    }
+    showToast("Connexion réussie.");
+  });
+
+  $("#signup-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const profile = {
+      nom: $("#signup-nom").value,
+      telephone: $("#signup-telephone").value,
+      batiment: $("#signup-batiment").value,
+      zone: $("#signup-zone").value,
+      role: $("#signup-role").value,
+      statut_actif: true,
+    };
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: $("#signup-email").value,
+      password: $("#signup-password").value,
+      options: {
+        data: {
+          ...profile,
+          email: $("#signup-email").value,
+        },
+        emailRedirectTo: window.location.href,
+      },
+    });
+    if (error) {
+      showToast(`Création: ${error.message}`);
+      return;
+    }
+    if (data.session?.user) {
+      state.user = data.session.user;
+      try {
+        await upsertOwnProfile(profile);
+      } catch (profileError) {
+        showToast(`Profil: ${profileError.message}`);
+        return;
+      }
+      showToast("Compte créé et connecté.");
+    } else {
+      showToast("Compte créé. Vérifiez votre email pour confirmer l'inscription.");
+      setAuthMode("login");
+    }
+  });
+
+  $("#logout-button").addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    state.user = null;
+    state.profile = null;
+    if (state.realtimeChannel) {
+      await supabaseClient.removeChannel(state.realtimeChannel);
+      state.realtimeChannel = null;
+    }
+    renderAuthState();
+    showToast("Déconnexion réussie.");
+  });
+
   $$(".nav-item").forEach((item) => item.addEventListener("click", () => setView(item.dataset.view)));
   $$('[data-jump]').forEach((button) => button.addEventListener("click", () => setView(button.dataset.jump)));
 
@@ -332,5 +486,4 @@ function bindEvents() {
 renderDashboard();
 renderTables();
 bindEvents();
-loadRemoteState();
-subscribeToRealtime();
+initializeAuth();
